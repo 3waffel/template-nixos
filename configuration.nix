@@ -1,16 +1,27 @@
-{ pkgs, ... }: {
-
-  system.stateVersion = "22.11";
-
-  networking.firewall.enable = false;
-
-  # Not rootless
-  virtualisation.docker = {
-    enable = true;
-    # setSocketVariable = true;
+{ pkgs, lib, ... }: {
+  nix = {
+    package = pkgs.nixVersions.latest;
+    settings = {
+      auto-optimise-store = true;
+      substituters = lib.mkBefore [
+        "https://nix-community.cachix.org"
+        "https://3waffel.cachix.org"
+      ];
+      trusted-public-keys = [
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        "3waffel.cachix.org-1:Tm5oJGJA8klOLa4dYRJvoYWQIpItX+0w9KvoRP8Z2mc="
+      ];
+      trusted-users = ["root" "@wheel"];
+      experimental-features = ["nix-command" "flakes"];
+      warn-dirty = false;
+      system-features = ["kvm" "big-parallel"];
+    };
   };
 
-  # SSH server
+  system.stateVersion = "22.11";
+  networking.firewall.enable = false;
+  virtualisation.docker.enable = true;
+
   services.openssh = {
     openFirewall = true;
     enable = true;
@@ -20,17 +31,23 @@
     }];
     settings.PasswordAuthentication = true;
   };
+  services.getty.autologinUser = "gitpod";
 
-  # Get package names from https://search.nixos.org/packages
-  # These system packages will be installed
   environment.systemPackages = with pkgs; [
     curl
+    coreutils
+    direnv
+    findutils
     gitAndTools.gitFull
+    home-manager
     htop
+    inetutils
     sudo
     tmux
     vim
     python3
+    unzip
+    wget
   ];
 
   security.sudo = {
@@ -47,20 +64,15 @@
     users = {
       root.password = "root";
       gitpod = {
-          extraGroups = [ "gitpod" "wheel" ];
-          uid = 33333;
-          group = "gitpod";
-          isNormalUser = true;
-          password = "gitpod";
-        };
+        extraGroups = [ "gitpod" "wheel" ];
+        uid = 33333;
+        group = "gitpod";
+        isNormalUser = true;
+        password = "gitpod";
+      };
     };
-
   };
 
-  # Auto console login
-  services.getty.autologinUser = "gitpod";
-
-  # Mount host /workspace inside guest
   system.activationScripts.workspaceLogin = {
     text = ''
       mkdir -m 0755 -p /workspace
@@ -83,23 +95,7 @@
     PROMPT_COMMAND='reset'
   '';
 
-  # Auto cd to $GITPOD_REPO_ROOT inside guest
   environment.extraInit = ''
       source /workspace/.shellhook
   '';
-
-  # Mount host /workspace inside guest
-  # systemd.mounts = [
-  #   {
-  #     what = "host0";
-  #     where = "/workspace";
-  #     type = "9p";
-  #     options = "trans=virtio,version=9p2000.L,rw";
-  #     wantedBy = [ "multi-user.target" ];
-  #     after = [ "getty.target" ];
-  #   }
-  # ];
-
-  # system.build.toplevelActivation = "root";
-
 }

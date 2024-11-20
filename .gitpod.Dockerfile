@@ -20,5 +20,7 @@ RUN mkdir -p $HOME/.config/direnv \
   && printf '%s\n' 'source <(direnv hook bash)' >> $HOME/.bashrc.d/999-direnv
 
 # Install qemu
-RUN sudo upgrade-packages
-RUN sudo install-packages qemu qemu-system-x86 libguestfs-tools sshpass netcat
+RUN sudo upgrade-packages \
+  && sudo install-packages qemu qemu-system-x86 libguestfs-tools \
+  sshpass netcat \
+  ffmpeg libsm6 libxext6
